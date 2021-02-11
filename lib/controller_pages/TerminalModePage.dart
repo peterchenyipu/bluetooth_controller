@@ -4,13 +4,13 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
-class ChatPage extends StatefulWidget {
+class TerminalModePage extends StatefulWidget {
   final BluetoothDevice server;
 
-  const ChatPage({this.server});
+  const TerminalModePage({this.server});
 
   @override
-  _ChatPage createState() => new _ChatPage();
+  _TerminalModePage createState() => new _TerminalModePage();
 }
 
 class _Message {
@@ -20,7 +20,7 @@ class _Message {
   _Message(this.whom, this.text);
 }
 
-class _ChatPage extends State<ChatPage> {
+class _TerminalModePage extends State<TerminalModePage> {
   static final clientID = 0;
   BluetoothConnection connection;
 
