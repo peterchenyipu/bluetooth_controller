@@ -1,18 +1,19 @@
 import 'dart:async';
+import 'package:bluetooth_controller/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
-import './BluetoothDeviceListEntry.dart';
+import 'BluetoothDeviceListEntry.dart';
 
-class SelectBondedDevicePage extends StatefulWidget {
+class SelectBondedDeviceWidget extends StatefulWidget {
   /// If true, on page start there is performed discovery upon the bonded devices.
   /// Then, if they are not avaliable, they would be disabled from the selection.
   final bool checkAvailability;
 
-  const SelectBondedDevicePage({this.checkAvailability = true});
+  const SelectBondedDeviceWidget({this.checkAvailability = true});
 
   @override
-  _SelectBondedDevicePage createState() => new _SelectBondedDevicePage();
+  _SelectBondedDeviceWidget createState() => new _SelectBondedDeviceWidget();
 }
 
 enum _DeviceAvailability {
@@ -29,14 +30,14 @@ class _DeviceWithAvailability extends BluetoothDevice {
   _DeviceWithAvailability(this.device, this.availability, [this.rssi]);
 }
 
-class _SelectBondedDevicePage extends State<SelectBondedDevicePage> {
+class _SelectBondedDeviceWidget extends State<SelectBondedDeviceWidget> {
   List<_DeviceWithAvailability> devices = List<_DeviceWithAvailability>();
 
   // Availability
   StreamSubscription<BluetoothDiscoveryResult> _discoveryStreamSubscription;
   bool _isDiscovering;
 
-  _SelectBondedDevicePage();
+  _SelectBondedDeviceWidget();
 
   @override
   void initState() {
@@ -95,6 +96,15 @@ class _SelectBondedDevicePage extends State<SelectBondedDevicePage> {
         _isDiscovering = false;
       });
     });
+
+    Future.delayed(Duration(seconds: 10), () {
+      if (_isDiscovering) {
+        _discoveryStreamSubscription.cancel();
+        setState(() {
+          _isDiscovering = false;
+        });
+      }
+    });
   }
 
   @override
@@ -108,37 +118,70 @@ class _SelectBondedDevicePage extends State<SelectBondedDevicePage> {
   @override
   Widget build(BuildContext context) {
     List<BluetoothDeviceListEntry> list = devices
-        .map((_device) => BluetoothDeviceListEntry(
+        .map((_DeviceWithAvailability _device) => BluetoothDeviceListEntry(
               device: _device.device,
               rssi: _device.rssi,
               enabled: _device.availability == _DeviceAvailability.yes,
               onTap: () {
-                Navigator.of(context).pop(_device.device);
+                startCommunicationMode(context, _device.device);
               },
             ))
         .toList();
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Select device'),
-        actions: <Widget>[
-          _isDiscovering
-              ? FittedBox(
-                  child: Container(
-                    margin: new EdgeInsets.all(16.0),
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white,
+
+    return Column(
+      children: <Widget>[
+            ListTile(
+              title: Text('Select Device'),
+              trailing: _isDiscovering
+                  ? FittedBox(
+                      child: Container(
+                        margin: new EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(),
                       ),
+                    )
+                  : IconButton(
+                      icon: Icon(Icons.replay),
+                      onPressed: _restartDiscovery,
                     ),
-                  ),
-                )
-              : IconButton(
-                  icon: Icon(Icons.replay),
-                  onPressed: _restartDiscovery,
-                )
-        ],
-      ),
-      body: ListView(children: list),
+            )
+          ] +
+          list,
     );
   }
+  // @override
+  // Widget build(BuildContext context) {
+  //   List<BluetoothDeviceListEntry> list = devices
+  //       .map((_device) => BluetoothDeviceListEntry(
+  //             device: _device.device,
+  //             rssi: _device.rssi,
+  //             enabled: _device.availability == _DeviceAvailability.yes,
+  //             onTap: () {
+  //               Navigator.of(context).pop(_device.device);
+  //             },
+  //           ))
+  //       .toList();
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: Text('Select device'),
+  //       actions: <Widget>[
+  //         _isDiscovering
+  //             ? FittedBox(
+  //                 child: Container(
+  //                   margin: new EdgeInsets.all(16.0),
+  //                   child: CircularProgressIndicator(
+  //                     valueColor: AlwaysStoppedAnimation<Color>(
+  //                       Colors.white,
+  //                     ),
+  //                   ),
+  //                 ),
+  //               )
+  //             : IconButton(
+  //                 icon: Icon(Icons.replay),
+  //                 onPressed: _restartDiscovery,
+  //               )
+  //       ],
+  //     ),
+  //     body: ListView(children: list),
+  //   );
+  // }
 }
