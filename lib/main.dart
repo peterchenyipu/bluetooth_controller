@@ -39,6 +39,9 @@ class _MainPage extends State<MainPage> {
   Timer _discoverableTimeoutTimer;
   int _discoverableTimeoutSecondsLeft = 0;
 
+  bool isDiscovering = false;
+  int timeout;
+
   @override
   void initState() {
     super.initState();
@@ -120,64 +123,56 @@ class _MainPage extends State<MainPage> {
         ],
       ),
       body: Container(
+        width: MediaQuery.of(context).size.width,
         child: ListView(
           children: <Widget>[
             ListTile(
-              title: _discoverableTimeoutSecondsLeft == 0
-                  ? const Text("Discoverable")
-                  : Text(
-                      "Discoverable for ${_discoverableTimeoutSecondsLeft}s"),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Checkbox(
-                    value: _discoverableTimeoutSecondsLeft != 0,
-                    onChanged: null,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: null,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () async {
-                      print('Discoverable requested');
-                      final int timeout = await FlutterBluetoothSerial.instance
-                          .requestDiscoverable(60);
-                      if (timeout < 0) {
-                        print('Discoverable mode denied');
-                      } else {
-                        print(
-                            'Discoverable mode acquired for $timeout seconds');
-                      }
-                      setState(() {
-                        _discoverableTimeoutTimer?.cancel();
-                        _discoverableTimeoutSecondsLeft = timeout;
-                        _discoverableTimeoutTimer =
-                            Timer.periodic(Duration(seconds: 1), (Timer timer) {
+                title: _discoverableTimeoutSecondsLeft == 0
+                    ? const Text("Make Discoverable")
+                    : Text(
+                        "Discoverable for ${_discoverableTimeoutSecondsLeft}s"),
+                trailing: isDiscovering
+                    ? CircularProgressIndicator(
+                        value: _discoverableTimeoutSecondsLeft / timeout)
+                    : IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () async {
+                          print('Discoverable requested');
+                          timeout = await FlutterBluetoothSerial.instance
+                              .requestDiscoverable(60);
+                          if (timeout < 0) {
+                            print('Discoverable mode denied');
+                          } else {
+                            print(
+                                'Discoverable mode acquired for $timeout seconds');
+                          }
                           setState(() {
-                            if (_discoverableTimeoutSecondsLeft < 0) {
-                              FlutterBluetoothSerial.instance.isDiscoverable
-                                  .then((isDiscoverable) {
-                                if (isDiscoverable) {
-                                  print(
-                                      "Discoverable after timeout... might be infinity timeout :F");
-                                  _discoverableTimeoutSecondsLeft += 1;
+                            isDiscovering = true;
+                            _discoverableTimeoutTimer?.cancel();
+                            _discoverableTimeoutSecondsLeft = timeout;
+                            _discoverableTimeoutTimer = Timer.periodic(
+                                Duration(seconds: 1), (Timer timer) {
+                              setState(() {
+                                if (_discoverableTimeoutSecondsLeft <= 0) {
+                                  FlutterBluetoothSerial.instance.isDiscoverable
+                                      .then((isDiscoverable) {
+                                    if (isDiscoverable) {
+                                      print(
+                                          "Discoverable after timeout... might be infinity timeout :F");
+                                      _discoverableTimeoutSecondsLeft = 0;
+                                    }
+                                  });
+                                  timer.cancel();
+                                  isDiscovering = false;
+                                  _discoverableTimeoutSecondsLeft = 0;
+                                } else {
+                                  _discoverableTimeoutSecondsLeft -= 1;
                                 }
                               });
-                              timer.cancel();
-                              _discoverableTimeoutSecondsLeft = 0;
-                            } else {
-                              _discoverableTimeoutSecondsLeft -= 1;
-                            }
+                            });
                           });
-                        });
-                      });
-                    },
-                  )
-                ],
-              ),
-            ),
+                        },
+                      )),
             Divider(),
             SelectBondedDeviceWidget(checkAvailability: false),
             Divider(),

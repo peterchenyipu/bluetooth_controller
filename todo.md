@@ -7,12 +7,13 @@
 
 ## Functionality
 - Multiple modes for sending data
-  - Terminal Mode
-  - Switch Mode
-  - GamePad Mode
-  - Slider Mode
   - *Custom Mode*
     - Ability to add individual components and move them around
+- Confirm Disconnect
+- Handle Bluetooth Exceptions:
+  - Bluetooth Connection Failed
+  - Bluetooth Connection Interrupted
+- 
 - Add a drop down information widget
   - Show:
     - Bluetooth device name

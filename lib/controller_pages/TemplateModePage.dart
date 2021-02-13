@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:bluetooth_controller/controller_pages/TerminalModePage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
@@ -28,6 +29,8 @@ class TemplateModePage<T> extends StatefulWidget {
 }
 
 class TemplateModePageState<T> extends State<TemplateModePage<T>> {
+  var _scaffoldKey = new GlobalKey<ScaffoldState>();
+
   BluetoothConnection connection;
   String name;
   IconData icon;
@@ -44,30 +47,44 @@ class TemplateModePageState<T> extends State<TemplateModePage<T>> {
     data = widget.defaultValue;
     super.initState();
 
-    BluetoothConnection.toAddress(widget.server.address).catchError((error) {
-      // handle error
-    }).then((_connection) {
-      print('Connected to the device');
-      connection = _connection;
-      setState(() {
-        isConnecting = false;
-        isDisconnecting = false;
-      });
-      if (widget.receiver != null) {
-        connection.input
-            .listen((Uint8List _data) => widget.receiver(_data, setState, data))
-            .onDone(() {
-          if (isDisconnecting) {
-            print('Disconnecting locally!');
-          } else {
-            print('Disconnected remotely!');
-          }
-          if (this.mounted) {
-            setState(() {});
-          }
+    try {
+      BluetoothConnection.toAddress(widget.server.address).catchError((error) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _showError("Unable to connect to ${widget.server.name}",
+              _scaffoldKey.currentContext);
         });
-      }
-    });
+      }).then((_connection) {
+        print('Connected to the device');
+        connection = _connection;
+        SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+          setState(() {
+            isConnecting = false;
+            isDisconnecting = false;
+          });
+        });
+
+        if (widget.receiver != null) {
+          connection.input
+              .listen(
+                  (Uint8List _data) => widget.receiver(_data, setState, data))
+              .onDone(() {
+            if (isDisconnecting) {
+              print('Disconnecting locally!');
+            } else {
+              print('Disconnected remotely!');
+            }
+            if (this.mounted) {
+              setState(() {});
+            }
+          });
+        }
+      });
+    } on PlatformException {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _showError("Unable to connect to ${widget.server.name}",
+            _scaffoldKey.currentContext);
+      });
+    }
   }
 
   @override
@@ -107,6 +124,7 @@ class TemplateModePageState<T> extends State<TemplateModePage<T>> {
                 ));
       },
       child: Scaffold(
+        key: _scaffoldKey,
         appBar: AppBar(
             title: (isConnecting
                 ? Text('Connecting to ' + widget.server.name)
@@ -114,8 +132,40 @@ class TemplateModePageState<T> extends State<TemplateModePage<T>> {
         body: SafeArea(
             child: isConnecting
                 ? Center(child: CircularProgressIndicator())
-                : widget.bodyBuilder(context, connection, setState, data)),
+                : () {
+                    if (isConnected)
+                      return widget.bodyBuilder(
+                          context, connection, setState, data);
+                    else {
+                      _showError(
+                          "Lost connection to ${widget.server.name}", context);
+                      return Container();
+                    }
+                  }()),
       ),
     );
+  }
+
+  void _showError(String message, BuildContext context) {
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(message),
+            contentPadding: EdgeInsets.zero,
+            actions: [
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text(
+                    'Ok',
+                    style: TextStyle(color: Colors.red),
+                  ))
+            ],
+          );
+        });
   }
 }
