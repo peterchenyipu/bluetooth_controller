@@ -16,15 +16,9 @@ class SelectBondedDeviceWidget extends StatefulWidget {
   _SelectBondedDeviceWidget createState() => new _SelectBondedDeviceWidget();
 }
 
-enum _DeviceAvailability {
-  no,
-  maybe,
-  yes,
-}
-
 class _DeviceWithAvailability extends BluetoothDevice {
   BluetoothDevice device;
-  _DeviceAvailability availability;
+  bool availability;
   int rssi;
 
   _DeviceWithAvailability(this.device, this.availability, [this.rssi]);
@@ -56,12 +50,8 @@ class _SelectBondedDeviceWidget extends State<SelectBondedDeviceWidget> {
       setState(() {
         devices = bondedDevices
             .map(
-              (device) => _DeviceWithAvailability(
-                device,
-                widget.checkAvailability
-                    ? _DeviceAvailability.maybe
-                    : _DeviceAvailability.yes,
-              ),
+              (device) =>
+                  _DeviceWithAvailability(device, !widget.checkAvailability),
             )
             .toList();
       });
@@ -84,7 +74,7 @@ class _SelectBondedDeviceWidget extends State<SelectBondedDeviceWidget> {
         while (i.moveNext()) {
           var _device = i.current;
           if (_device.device == r.device) {
-            _device.availability = _DeviceAvailability.yes;
+            _device.availability = true;
             _device.rssi = r.rssi;
           }
         }
@@ -117,17 +107,6 @@ class _SelectBondedDeviceWidget extends State<SelectBondedDeviceWidget> {
 
   @override
   Widget build(BuildContext context) {
-    List<BluetoothDeviceListEntry> list = devices
-        .map((_DeviceWithAvailability _device) => BluetoothDeviceListEntry(
-              device: _device.device,
-              rssi: _device.rssi,
-              enabled: _device.availability == _DeviceAvailability.yes,
-              onTap: () {
-                startCommunicationMode(context, _device.device);
-              },
-            ))
-        .toList();
-
     return Column(
       children: <Widget>[
             ListTile(
@@ -145,7 +124,27 @@ class _SelectBondedDeviceWidget extends State<SelectBondedDeviceWidget> {
                     ),
             )
           ] +
-          list,
+          (devices.isNotEmpty
+              ? devices
+                  .map((_DeviceWithAvailability _device) =>
+                      BluetoothDeviceListEntry(
+                        device: _device.device,
+                        rssi: _device.rssi,
+                        enabled: _device.availability == true,
+                        onTap: () {
+                          startCommunicationMode(context, _device.device);
+                        },
+                      ))
+                  .toList()
+              : [
+                  ListTile(
+                    title: Center(
+                        child: Text(
+                      'No devices found',
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    )),
+                  )
+                ]),
     );
   }
   // @override
