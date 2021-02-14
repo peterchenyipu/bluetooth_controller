@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bluetooth_controller/controller_pages/GamePadModePage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
@@ -88,6 +89,7 @@ class _MainPage extends State<MainPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bluetooth Controller'),
+        toolbarHeight: 45,
         actions: [
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -191,10 +193,11 @@ void startCommunicationMode(BuildContext context, BluetoothDevice server) {
         return SimpleDialog(
             title: Text('Choose mode'),
             children: [
-              joypadModePage,
               switchModePage,
               sliderModePage,
-              terminalModePage
+              terminalModePage,
+              joypadModePage,
+              gamepadModePage
             ]
                 .map<Widget>((TemplateModePage Function(BluetoothDevice) fn) =>
                     SimpleDialogItem(fn, server))

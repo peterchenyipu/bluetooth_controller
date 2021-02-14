@@ -7,12 +7,13 @@ import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
 class TemplateModePage<T> extends StatefulWidget {
   final BluetoothDevice server;
-  final Widget Function(BuildContext, BluetoothConnection, StateSetter, T)
+  final Widget Function(BuildContext, BluetoothConnectionInfo, StateSetter, T)
       bodyBuilder;
   final void Function(Uint8List, StateSetter, T) receiver;
   final String name;
   final IconData icon;
   final T defaultValue;
+  final List<DeviceOrientation> allowedOrientations;
 
   const TemplateModePage({
     @required this.server,
@@ -21,6 +22,7 @@ class TemplateModePage<T> extends StatefulWidget {
     @required this.icon,
     @required this.defaultValue,
     this.receiver,
+    this.allowedOrientations = DeviceOrientation.values,
     key,
   }) : super(key: key);
 
@@ -31,21 +33,25 @@ class TemplateModePage<T> extends StatefulWidget {
 class TemplateModePageState<T> extends State<TemplateModePage<T>> {
   var _scaffoldKey = new GlobalKey<ScaffoldState>();
 
-  BluetoothConnection connection;
+  // BluetoothConnection connection;
+  var connectionInfo = BluetoothConnectionInfo(null);
   String name;
   IconData icon;
 
   T data;
 
-  bool isConnecting = true;
-  bool get isConnected => connection != null && connection.isConnected;
+  // bool isConnecting = true;
+  // bool get isConnected => connection != null && connection.isConnected;
 
-  bool isDisconnecting = false;
+  // bool isDisconnecting = false;
 
   @override
   void initState() {
-    data = widget.defaultValue;
     super.initState();
+
+    SystemChrome.setPreferredOrientations(widget.allowedOrientations);
+
+    data = widget.defaultValue;
 
     try {
       BluetoothConnection.toAddress(widget.server.address).catchError((error) {
@@ -55,20 +61,20 @@ class TemplateModePageState<T> extends State<TemplateModePage<T>> {
         });
       }).then((_connection) {
         print('Connected to the device');
-        connection = _connection;
+        connectionInfo.connection = _connection;
         SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
           setState(() {
-            isConnecting = false;
-            isDisconnecting = false;
+            connectionInfo.isConnecting = false;
+            connectionInfo.isDisconnecting = false;
           });
         });
 
         if (widget.receiver != null) {
-          connection.input
+          connectionInfo.connection.input
               .listen(
                   (Uint8List _data) => widget.receiver(_data, setState, data))
               .onDone(() {
-            if (isDisconnecting) {
+            if (connectionInfo.isDisconnecting) {
               print('Disconnecting locally!');
             } else {
               print('Disconnected remotely!');
@@ -89,11 +95,13 @@ class TemplateModePageState<T> extends State<TemplateModePage<T>> {
 
   @override
   void dispose() {
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+
     // Avoid memory leak (`setState` after dispose) and disconnect
-    if (isConnected) {
-      isDisconnecting = true;
-      connection.dispose();
-      connection = null;
+    if (connectionInfo.isConnected) {
+      connectionInfo.isDisconnecting = true;
+      connectionInfo.connection.dispose();
+      connectionInfo.connection = null;
     }
 
     if (T == MessageWrapper) (data as MessageWrapper).dispose();
@@ -103,6 +111,7 @@ class TemplateModePageState<T> extends State<TemplateModePage<T>> {
 
   @override
   Widget build(BuildContext context) {
+    Widget body = widget.bodyBuilder(context, connectionInfo, setState, data);
     return WillPopScope(
       onWillPop: () async {
         return await showDialog<bool>(
@@ -126,16 +135,16 @@ class TemplateModePageState<T> extends State<TemplateModePage<T>> {
       child: Scaffold(
         key: _scaffoldKey,
         appBar: AppBar(
-            title: (isConnecting
+            toolbarHeight: 45,
+            title: (connectionInfo.isConnecting
                 ? Text('Connecting to ' + widget.server.name)
                 : Text(widget.server.name))),
         body: SafeArea(
-            child: isConnecting
+            child: connectionInfo.isConnecting
                 ? Center(child: CircularProgressIndicator())
                 : () {
-                    if (isConnected)
-                      return widget.bodyBuilder(
-                          context, connection, setState, data);
+                    if (connectionInfo.isConnected)
+                      return body;
                     else {
                       _showError(
                           "Lost connection to ${widget.server.name}", context);
@@ -168,4 +177,17 @@ class TemplateModePageState<T> extends State<TemplateModePage<T>> {
           );
         });
   }
+}
+
+class BluetoothConnectionInfo {
+  BluetoothConnection connection;
+  bool get isConnected => connection != null && connection.isConnected;
+  bool isConnecting;
+  bool isDisconnecting;
+
+  BluetoothConnectionInfo(
+    this.connection, {
+    this.isConnecting = true,
+    this.isDisconnecting = false,
+  });
 }

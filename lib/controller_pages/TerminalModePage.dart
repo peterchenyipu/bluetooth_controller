@@ -7,7 +7,7 @@ import 'dart:convert';
 TemplateModePage terminalModePage(BluetoothDevice server) {
   return TemplateModePage<MessageWrapper>(
     server: server,
-    bodyBuilder: (BuildContext context, BluetoothConnection connection,
+    bodyBuilder: (BuildContext context, BluetoothConnectionInfo connectionInfo,
         StateSetter setState, MessageWrapper messageWrapper) {
       return Column(
         children: <Widget>[
@@ -50,12 +50,12 @@ TemplateModePage terminalModePage(BluetoothDevice server) {
                     style: const TextStyle(fontSize: 15.0),
                     controller: messageWrapper.textEditingController,
                     decoration: InputDecoration.collapsed(
-                      hintText: connection != null && connection.isConnected
+                      hintText: connectionInfo.isConnected
                           ? 'Type your message...'
                           : 'Chat got disconnected',
                       hintStyle: const TextStyle(color: Colors.grey),
                     ),
-                    enabled: connection != null && connection.isConnected,
+                    enabled: connectionInfo.isConnected,
                   ),
                 ),
               ),
@@ -63,7 +63,7 @@ TemplateModePage terminalModePage(BluetoothDevice server) {
                 margin: const EdgeInsets.all(8.0),
                 child: IconButton(
                     icon: const Icon(Icons.send),
-                    onPressed: connection != null && connection.isConnected
+                    onPressed: connectionInfo.isConnected
                         ? () {
                             String text = messageWrapper
                                 .textEditingController.text
@@ -72,8 +72,10 @@ TemplateModePage terminalModePage(BluetoothDevice server) {
 
                             if (text.length > 0) {
                               try {
-                                connection.output.add(utf8.encode(text));
-                                connection.output.allSent.then((value) {
+                                connectionInfo.connection.output
+                                    .add(utf8.encode(text));
+                                connectionInfo.connection.output.allSent
+                                    .then((value) {
                                   setState(() => messageWrapper.messages
                                       .add(Message(0, text)));
                                   messageWrapper.scrollController.animateTo(

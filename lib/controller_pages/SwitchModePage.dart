@@ -3,32 +3,40 @@ import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'TemplateModePage.dart';
 import 'dart:typed_data';
 
-TemplateModePage<bool> switchModePage(BluetoothDevice server) {
-  return TemplateModePage<bool>(
+TemplateModePage<BoolWrapper> switchModePage(BluetoothDevice server) {
+  return TemplateModePage<BoolWrapper>(
     server: server,
-    bodyBuilder:
-        (_, BluetoothConnection connection, StateSetter setState, bool state) {
-      bool isConnected = connection != null && connection.isConnected;
-      return IconButton(
-        icon: Icon(
-          Icons.power_settings_new,
-          color: state ? Colors.green : Colors.red,
+    bodyBuilder: (_, BluetoothConnectionInfo connectionInfo,
+        StateSetter setState, BoolWrapper state) {
+      return Center(
+        child: IconButton(
+          icon: Icon(
+            Icons.power_settings_new,
+            color: state.val ? Colors.green : Colors.red,
+          ),
+          iconSize: 130,
+          onPressed: connectionInfo.isConnected
+              ? () {
+                  // try {
+                  connectionInfo.connection.output
+                      .add(Uint8List.fromList([!state.val ? 1 : 0]));
+                  setState(() => state.val = !state.val);
+                  // } catch (e) {
+                  //   print(e);
+                  // }
+                }
+              : null,
+          splashColor: Colors.transparent,
         ),
-        iconSize: 130,
-        onPressed: isConnected
-            ? () {
-                try {
-                  connection.output.add(Uint8List.fromList([!state ? 1 : 0]));
-                  connection.output.allSent
-                      .then((_) => setState(() => state = !state));
-                } catch (e) {}
-              }
-            : null,
-        splashColor: Colors.transparent,
       );
     },
     name: "Switch",
     icon: Icons.toggle_off,
-    defaultValue: false,
+    defaultValue: BoolWrapper(false),
   );
+}
+
+class BoolWrapper {
+  bool val;
+  BoolWrapper(this.val);
 }
