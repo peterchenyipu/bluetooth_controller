@@ -18,6 +18,7 @@ TemplateModePage<math.Point> joypadModePage(BluetoothDevice server) {
   bool lbState = false;
   bool raState = false;
   bool rbState = false;
+  bool midPushed = false;
   return TemplateModePage<math.Point>(
     server: server,
     bodyBuilder: (BuildContext context, BluetoothConnectionInfo connectionInfo,
@@ -37,11 +38,19 @@ TemplateModePage<math.Point> joypadModePage(BluetoothDevice server) {
             buttons = buttons | (1 << 2);
           if (rbState)
             buttons = buttons | (1 << 3);
+          if (midPushed)
+            buttons = buttons | (1 << 4);
 
           connectionInfo.connection.output.add(
               Uint8List.fromList([left_x.round() + 127, left_y.round() + 127,
                 right_x.round() + 127, right_y.round() + 127, buttons, 1]));
-        } catch (e) {}
+          if (!connectionInfo.isConnected) {
+            // reconnect
+            
+          }
+        } catch (e) {
+
+        }
       });
       return Center(
         child: Row(
@@ -94,17 +103,31 @@ TemplateModePage<math.Point> joypadModePage(BluetoothDevice server) {
                           left_x = sin(degrees) * temp;
                           if (left_x < -127)
                             left_x = -127;
-                          else if (left_x > 128) left_x = 128;
+                          else if (left_x > 127) left_x = 127;
                           left_y = cos(degrees) * temp;
                           if (left_y < -127)
                             left_y = -127;
-                          else if (left_y > 128) left_y = 128;
+                          else if (left_y > 127) left_y = 127;
                         },
                         interval: Duration(milliseconds: 5),
                         showArrows: false,
-                        size: 150)
+                        size: 200)
                   ]),
             ),
+            GestureDetector(
+                onTapDown: (_) {
+                  midPushed = true;
+                },
+                onTapCancel: () {
+                  midPushed = false;
+                },
+                onTapUp: (_) {
+                  midPushed = false;
+                },
+                child: AbsorbPointer(
+                  child: ElevatedButton(
+                      onPressed: () {}, child: Text("MID")),
+                )),
             Container(
                 margin: const EdgeInsets.all(15.0),
                 child: Column(
@@ -152,15 +175,15 @@ TemplateModePage<math.Point> joypadModePage(BluetoothDevice server) {
                           right_x = sin(degrees) * temp;
                           if (right_x < -127)
                             right_x = -127;
-                          else if (right_x > 128) right_x = 128;
+                          else if (right_x > 127) right_x = 127;
                           right_y = cos(degrees) * temp;
                           if (right_y < -127)
                             right_y = -127;
-                          else if (right_y > 128) right_y = 128;
+                          else if (right_y > 127) right_y = 127;
                         },
                         interval: Duration(milliseconds: 5),
                         showArrows: false,
-                        size: 150)
+                        size: 200)
                   ],
                 )),
           ],
